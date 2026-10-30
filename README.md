@@ -13,7 +13,16 @@ Java solutions for algorithmic problems and practical full-stack/SQL news websit
 
 ---
 
-## 2. Practical Test (News Website in Pure Java & SQL)
+## 2. Logical Test Questions
+
+Answers and explanations are documented in **[`LOGICAL_TEST.md`](LOGICAL_TEST.md)**:
+
+1. **Question 1**: **19 days**
+2. **Question 2**: **Measuring 1L with 3L & 5L bottles**: We use the 5L bottle's remaining capacity to transfer 2L from the 3L bottle, leaving exactly 1L in the 3L bottle.
+
+---
+
+## 3. Practical Test (News Website in Pure Java & SQL)
 
 Located in **[`practical test/`](practical%20test/)**:
 
