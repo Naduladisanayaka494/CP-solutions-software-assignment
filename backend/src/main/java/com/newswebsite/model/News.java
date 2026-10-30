@@ -27,6 +27,14 @@ public class News {
     @Column(length = 100)
     private String author = "Staff Reporter";
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private User authorUser;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private NewsStatus status = NewsStatus.PUBLISHED;
+
     @Column(name = "published_at", nullable = false)
     private LocalDateTime publishedAt = LocalDateTime.now();
 
@@ -49,6 +57,17 @@ public class News {
         this.summary = summary;
         this.content = content;
         this.author = author != null ? author : "Staff Reporter";
+        this.status = NewsStatus.PUBLISHED;
+        this.publishedAt = LocalDateTime.now();
+    }
+
+    public News(String title, String summary, String content, String author, User authorUser, NewsStatus status) {
+        this.title = title;
+        this.summary = summary;
+        this.content = content;
+        this.author = author != null ? author : "Staff Reporter";
+        this.authorUser = authorUser;
+        this.status = status != null ? status : NewsStatus.PENDING_APPROVAL;
         this.publishedAt = LocalDateTime.now();
     }
 
@@ -66,6 +85,12 @@ public class News {
 
     public String getAuthor() { return author; }
     public void setAuthor(String author) { this.author = author; }
+
+    public User getAuthorUser() { return authorUser; }
+    public void setAuthorUser(User authorUser) { this.authorUser = authorUser; }
+
+    public NewsStatus getStatus() { return status; }
+    public void setStatus(NewsStatus status) { this.status = status; }
 
     public LocalDateTime getPublishedAt() { return publishedAt; }
     public void setPublishedAt(LocalDateTime publishedAt) { this.publishedAt = publishedAt; }

@@ -4,6 +4,8 @@ import CategoryBar from './components/CategoryBar';
 import NewsCard from './components/NewsCard';
 import NewsDetail from './components/NewsDetail';
 import AuthModal from './components/AuthModal';
+import AdminPanel from './components/AdminPanel';
+import WriterModal from './components/WriterModal';
 import { getCategories, getNews, getNewsDetail } from './services/api';
 
 export default function App() {
@@ -16,46 +18,49 @@ export default function App() {
   const [articleLoading, setArticleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Reader Auth State
+  // Modals state
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [writerModalOpen, setWriterModalOpen] = useState(false);
+
+  // User Auth State
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('news_reader_user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Load Categories on mount
-  useEffect(() => {
-    async function loadInitialData() {
-      try {
-        const catData = await getCategories();
-        setCategories(catData);
-      } catch (err) {
-        console.error('Failed to load categories', err);
-        setError('Cannot connect to backend server. Make sure Spring Boot is running on port 8080.');
-      }
+  const loadCategories = async () => {
+    try {
+      const catData = await getCategories();
+      setCategories(catData);
+    } catch (err) {
+      console.error('Failed to load categories', err);
+      setError('Cannot connect to backend server. Make sure Spring Boot is running on port 8080.');
     }
-    loadInitialData();
+  };
+
+  const fetchHeadlines = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await getNews(selectedCategoryId);
+      setNewsList(data);
+    } catch (err) {
+      console.error('Failed to load news headlines', err);
+      setError('Failed to fetch news headlines.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
   }, []);
 
-  // Load News whenever selected category changes
   useEffect(() => {
-    async function fetchHeadlines() {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await getNews(selectedCategoryId);
-        setNewsList(data);
-      } catch (err) {
-        console.error('Failed to load news headlines', err);
-        setError('Failed to fetch news headlines.');
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchHeadlines();
   }, [selectedCategoryId]);
 
-  // Load article detail when selectedArticleId changes
   useEffect(() => {
     if (!selectedArticleId) {
       setArticleDetail(null);
@@ -84,11 +89,13 @@ export default function App() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('news_reader_user');
+    setAdminPanelOpen(false);
+    setWriterModalOpen(false);
   };
 
   const handleSelectCategory = (catId) => {
     setSelectedCategoryId(catId);
-    setSelectedArticleId(null); // Return to headlines list when switching category
+    setSelectedArticleId(null);
   };
 
   const handleCommentAdded = (newComment) => {
@@ -96,6 +103,24 @@ export default function App() {
       setArticleDetail({
         ...articleDetail,
         comments: [newComment, ...(articleDetail.comments || [])]
+      });
+    }
+  };
+
+  const handleCommentUpdated = (updatedComment) => {
+    if (articleDetail && articleDetail.comments) {
+      setArticleDetail({
+        ...articleDetail,
+        comments: articleDetail.comments.map(c => c.id === updatedComment.id ? updatedComment : c)
+      });
+    }
+  };
+
+  const handleCommentDeleted = (commentId) => {
+    if (articleDetail && articleDetail.comments) {
+      setArticleDetail({
+        ...articleDetail,
+        comments: articleDetail.comments.filter(c => c.id !== commentId)
       });
     }
   };
@@ -111,6 +136,8 @@ export default function App() {
         onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={handleLogout}
         onHomeClick={() => { setSelectedArticleId(null); setSelectedCategoryId(null); }}
+        onOpenAdmin={() => setAdminPanelOpen(true)}
+        onOpenWriter={() => setWriterModalOpen(true)}
       />
 
       <CategoryBar
@@ -139,6 +166,8 @@ export default function App() {
               user={user}
               onOpenAuth={() => setAuthModalOpen(true)}
               onCommentAdded={handleCommentAdded}
+              onCommentUpdated={handleCommentUpdated}
+              onCommentDeleted={handleCommentDeleted}
             />
           ) : (
             <div style={{ textAlign: 'center', padding: '4rem 0' }}>
@@ -178,10 +207,29 @@ export default function App() {
         )}
       </main>
 
+      {/* Reader Login / Registration Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Main Editor / Admin Panel */}
+      <AdminPanel
+        isOpen={adminPanelOpen}
+        onClose={() => setAdminPanelOpen(false)}
+        token={user ? user.token : null}
+        onCategoriesChanged={loadCategories}
+        onArticleApproved={fetchHeadlines}
+      />
+
+      {/* Writer Modal */}
+      <WriterModal
+        isOpen={writerModalOpen}
+        onClose={() => setWriterModalOpen(false)}
+        token={user ? user.token : null}
+        categories={categories}
+        onArticleSubmitted={() => {}}
       />
     </div>
   );

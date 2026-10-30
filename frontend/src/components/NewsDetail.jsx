@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Clock, MessageSquare, Send, User, Lock } from 'lucide-react';
-import { postComment } from '../services/api';
+import { ArrowLeft, Clock, MessageSquare, Send, User, Lock, Edit2, Trash2, Check, X } from 'lucide-react';
+import { postComment, editComment, deleteComment } from '../services/api';
 
 function getBadgeClass(name) {
   const lower = (name || '').toLowerCase();
@@ -22,10 +22,15 @@ function formatDate(dateString) {
   });
 }
 
-export default function NewsDetail({ article, onBack, user, onOpenAuth, onCommentAdded }) {
+export default function NewsDetail({ article, onBack, user, onOpenAuth, onCommentAdded, onCommentUpdated, onCommentDeleted }) {
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Comment Editing state
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
@@ -49,6 +54,47 @@ export default function NewsDetail({ article, onBack, user, onOpenAuth, onCommen
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleStartEdit = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditingText(comment.commentText);
+  };
+
+  const handleSaveEdit = async (commentId) => {
+    if (!editingText.trim()) return;
+    setActionLoading(true);
+    try {
+      const updated = await editComment(commentId, editingText, user.token);
+      setEditingCommentId(null);
+      if (onCommentUpdated) {
+        onCommentUpdated(updated);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to edit comment');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDelete = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    setActionLoading(true);
+    try {
+      await deleteComment(commentId, user.token);
+      if (onCommentDeleted) {
+        onCommentDeleted(commentId);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete comment');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const canModifyComment = (comment) => {
+    if (!user) return false;
+    return user.role === 'ROLE_ADMIN' || user.id === comment.userId;
   };
 
   return (
@@ -145,16 +191,73 @@ export default function NewsDetail({ article, onBack, user, onOpenAuth, onCommen
             ) : (
               article.comments.map((comment) => (
                 <div key={comment.id} className="comment-card">
-                  <div className="comment-author-bar">
-                    <div className="avatar-circle">
-                      {(comment.authorName || 'R')[0].toUpperCase()}
+                  <div className="comment-author-bar" style={{ justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div className="avatar-circle">
+                        {(comment.authorName || 'R')[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="comment-author-name">{comment.authorName}</div>
+                        <div className="comment-time">
+                          {formatDate(comment.createdAt)}
+                          {comment.updatedAt && ' (edited)'}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="comment-author-name">{comment.authorName}</div>
-                      <div className="comment-time">{formatDate(comment.createdAt)}</div>
-                    </div>
+
+                    {canModifyComment(comment) && (
+                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <button
+                          className="btn btn-ghost"
+                          onClick={() => handleStartEdit(comment)}
+                          title="Edit your comment"
+                          style={{ padding: '0.3rem' }}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          className="btn btn-ghost"
+                          onClick={() => handleDelete(comment.id)}
+                          title="Delete your comment"
+                          style={{ padding: '0.3rem', color: 'var(--accent)' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <p className="comment-text">{comment.commentText}</p>
+
+                  {editingCommentId === comment.id ? (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <textarea
+                        className="comment-textarea"
+                        style={{ minHeight: '60px' }}
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                      />
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                          onClick={() => handleSaveEdit(comment.id)}
+                          disabled={actionLoading}
+                        >
+                          <Check size={13} /> Save
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                          onClick={() => setEditingCommentId(null)}
+                        >
+                          <X size={13} /> Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="comment-text">{comment.commentText}</p>
+                  )}
                 </div>
               ))
             )}

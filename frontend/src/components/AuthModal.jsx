@@ -33,6 +33,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
   };
 
+  const handleQuickLogin = (u, p) => {
+    setUsername(u);
+    setPassword(p);
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -54,7 +59,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             className={`modal-tab ${!isLogin ? 'active' : ''}`}
             onClick={() => { setIsLogin(false); setError(''); }}
           >
-            Create Account
+            Create Reader Account
           </button>
         </div>
 
@@ -68,7 +73,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               className="form-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. reader_kamal"
+              placeholder="e.g. admin_editor or reader_kamal"
               required
             />
           </div>
@@ -107,14 +112,25 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               disabled={loading}
             >
               {isLogin ? <LogIn size={16} /> : <UserPlus size={16} />}
-              <span>{loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Reader Account')}</span>
+              <span>{loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}</span>
             </button>
           </div>
 
           {isLogin && (
-            <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Tip: You can use demo credentials <strong>reader_kamal</strong> / <strong>password123</strong>
-            </p>
+            <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', background: '#f8fafc', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Quick Demo Accounts:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <a href="#admin" onClick={(e) => { e.preventDefault(); handleQuickLogin('admin_editor', 'admin123'); }} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+                  🔑 <strong>Main Editor</strong>: admin_editor / admin123
+                </a>
+                <a href="#writer" onClick={(e) => { e.preventDefault(); handleQuickLogin('writer_sahan', 'writer123'); }} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+                  ✍️ <strong>Writer</strong>: writer_sahan / writer123
+                </a>
+                <a href="#reader" onClick={(e) => { e.preventDefault(); handleQuickLogin('reader_kamal', 'password123'); }} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+                  👤 <strong>Reader</strong>: reader_kamal / password123
+                </a>
+              </div>
+            </div>
           )}
         </form>
       </div>

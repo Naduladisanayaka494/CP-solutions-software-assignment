@@ -1,12 +1,12 @@
 package com.newswebsite.controller;
 
-import com.newswebsite.dto.CommentDto;
-import com.newswebsite.dto.CreateCommentRequest;
-import com.newswebsite.dto.NewsDetailDto;
-import com.newswebsite.dto.NewsHeadlineDto;
+import com.newswebsite.dto.*;
+import com.newswebsite.model.Category;
 import com.newswebsite.model.Comment;
 import com.newswebsite.model.News;
+import com.newswebsite.model.NewsStatus;
 import com.newswebsite.model.User;
+import com.newswebsite.repository.CategoryRepository;
 import com.newswebsite.repository.CommentRepository;
 import com.newswebsite.repository.NewsRepository;
 import com.newswebsite.repository.UserRepository;
@@ -15,11 +15,14 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -31,15 +34,18 @@ public class NewsController {
     private NewsRepository newsRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
     private CommentRepository commentRepository;
 
     @Autowired
     private UserRepository userRepository;
 
     /**
-     * Get news headlines.
-     * If categoryId is provided, returns headlines for that category.
-     * Otherwise returns all headlines ordered by published date descending.
+     * Get published news headlines.
+     * If categoryId is provided, returns published headlines for that category.
+     * Otherwise returns all published headlines ordered by date descending.
      */
     @GetMapping
     @Transactional(readOnly = true)
@@ -47,9 +53,9 @@ public class NewsController {
             @RequestParam(required = false) Long categoryId) {
         List<News> newsList;
         if (categoryId != null) {
-            newsList = newsRepository.findByCategoryId(categoryId);
+            newsList = newsRepository.findPublishedByCategoryId(categoryId);
         } else {
-            newsList = newsRepository.findAllWithCategories();
+            newsList = newsRepository.findAllPublishedWithCategories();
         }
 
         List<NewsHeadlineDto> dtos = newsList.stream()
@@ -97,9 +103,7 @@ public class NewsController {
             @Valid @RequestBody CreateCommentRequest request,
             Authentication authentication) {
 
-        News news = newsRepository.findById(id)
-                .orElse(null);
-
+        News news = newsRepository.findById(id).orElse(null);
         if (news == null) {
             return ResponseEntity.notFound().build();
         }
@@ -121,5 +125,53 @@ public class NewsController {
         Comment savedComment = commentRepository.save(comment);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(CommentDto.fromEntity(savedComment));
+    }
+
+    /**
+     * Writer submits an article for approval to the Main Editor.
+     * Status is set to PENDING_APPROVAL.
+     */
+    @PostMapping("/submit")
+    @PreAuthorize("hasAnyRole('WRITER', 'ADMIN')")
+    @Transactional
+    public ResponseEntity<?> submitArticle(
+            @Valid @RequestBody NewsSubmissionRequest request,
+            Authentication authentication) {
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        User authorUser = userRepository.findById(userDetails.getId()).orElse(null);
+
+        News news = new News(
+                request.getTitle(),
+                request.getSummary(),
+                request.getContent(),
+                userDetails.getUsername(),
+                authorUser,
+                NewsStatus.PENDING_APPROVAL
+        );
+
+        // Associate categories
+        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+            news.setCategories(new HashSet<>(categories));
+        }
+
+        News savedNews = newsRepository.save(news);
+        return ResponseEntity.status(HttpStatus.CREATED).body(NewsHeadlineDto.fromEntity(savedNews));
+    }
+
+    /**
+     * Writer views their own submitted articles and their status.
+     */
+    @GetMapping("/my-submissions")
+    @PreAuthorize("hasAnyRole('WRITER', 'ADMIN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<NewsHeadlineDto>> getMySubmissions(Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        List<News> myNews = newsRepository.findByAuthorUser_IdOrderByPublishedAtDesc(userDetails.getId());
+        List<NewsHeadlineDto> dtos = myNews.stream()
+                .map(NewsHeadlineDto::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 }
