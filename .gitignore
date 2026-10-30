@@ -2,6 +2,7 @@
 *.class
 .idea/
 *.iml
+pure-java-sql/
 
 # Maven build directory
 backend/target/
