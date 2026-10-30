@@ -17,14 +17,14 @@ public class Main {
         System.out.println("=================================================");
 
         try {
-            // 1. Initialize Database (MySQL or embedded fallback)
+
             DatabaseManager.init();
             Connection conn = DatabaseManager.getConnection();
 
-            // 2. Start Built-in JDK HTTP Server (No Tomcat/Spring needed!)
+
             HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
 
-            // 3. Register HTTP Route Handlers
+         
             server.createContext("/", new HomeHandler(conn));
             server.createContext("/news", new NewsDetailHandler(conn));
             server.createContext("/add-comment", new AddCommentHandler(conn));

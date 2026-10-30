@@ -11,7 +11,6 @@ public class DatabaseManager {
     private static boolean isMySql = false;
 
     public static synchronized void init() {
-        // Try MySQL first
         String mysqlUrl = "jdbc:mysql://localhost:3306/newsdb?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=1000&socketTimeout=1000";
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
@@ -44,13 +43,12 @@ public class DatabaseManager {
 
     private static void initTables() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            // 1. Categories
+
             stmt.execute("CREATE TABLE IF NOT EXISTS categories (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY, " +
                     "name VARCHAR(100) NOT NULL UNIQUE, " +
                     "description VARCHAR(255))");
 
-            // 2. News
             stmt.execute("CREATE TABLE IF NOT EXISTS news (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY, " +
                     "title VARCHAR(255) NOT NULL, " +
@@ -59,7 +57,7 @@ public class DatabaseManager {
                     "author VARCHAR(100) DEFAULT 'Staff Reporter', " +
                     "published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
 
-            // 3. News Categories (Many-to-Many Join Table)
+
             stmt.execute("CREATE TABLE IF NOT EXISTS news_categories (" +
                     "news_id INT NOT NULL, " +
                     "category_id INT NOT NULL, " +
@@ -67,7 +65,7 @@ public class DatabaseManager {
                     "FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE, " +
                     "FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE)");
 
-            // 4. Comments
+
             stmt.execute("CREATE TABLE IF NOT EXISTS comments (" +
                     "id INT AUTO_INCREMENT PRIMARY KEY, " +
                     "news_id INT NOT NULL, " +
@@ -76,20 +74,19 @@ public class DatabaseManager {
                     "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE)");
 
-            // Check if seeded
+
             java.sql.ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM categories");
             if (rs.next() && rs.getInt(1) == 0) {
                 System.out.println("[DatabaseManager] Seeding initial SQL data...");
 
-                // Categories
+
                 stmt.execute("INSERT INTO categories (id, name, description) VALUES " +
                         "(1, 'Sports', 'Athletic events, matches, tournaments, and sports updates'), " +
                         "(2, 'Entertainment', 'Cinema, music, celebrity culture, and pop buzz'), " +
                         "(3, 'Technology', 'Computing, gadgets, artificial intelligence, and innovations'), " +
                         "(4, 'World News', 'Global affairs and international relations')");
 
-                // News
-                // Example: "Sl lost" belongs to BOTH Sports (1) and Entertainment (2)
+
                 stmt.execute("INSERT INTO news (id, title, summary, content, author) VALUES " +
                         "(1, 'Sl lost', " +
                         "'Dramatic defeat sparks nationwide entertainment and sports commentary as final over slips away.', " +
@@ -108,12 +105,11 @@ public class DatabaseManager {
                         "'Pioneering artificial intelligence algorithms are demonstrating unprecedented accuracy in early medical screenings, reducing patient diagnostic wait times and aiding healthcare professionals in complex cases.', " +
                         "'Elena Rostova')");
 
-                // Many-to-Many Associations:
-                // "Sl lost" -> Sports (1) & Entertainment (2)
+
                 stmt.execute("INSERT INTO news_categories (news_id, category_id) VALUES " +
                         "(1, 1), (1, 2), (2, 1), (3, 2), (4, 3)");
 
-                // Comments
+
                 stmt.execute("INSERT INTO comments (news_id, author_name, comment_text) VALUES " +
                         "(1, 'reader_kamal', 'Hard luck! The middle overs were good, but the death overs cost us the game.'), " +
                         "(1, 'sports_fan99', 'Entertaining game regardless, kept everyone on the edge of their seats!')");

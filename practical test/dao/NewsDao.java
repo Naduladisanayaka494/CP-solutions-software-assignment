@@ -17,9 +17,7 @@ public class NewsDao {
         this.connection = connection;
     }
 
-    /**
-     * Fetch all news headlines ordered by published date descending.
-     */
+
     public List<News> getAllNews() throws SQLException {
         List<News> list = new ArrayList<>();
         String sql = "SELECT id, title, summary, content, author, published_at FROM news ORDER BY published_at DESC";
@@ -34,10 +32,7 @@ public class NewsDao {
         return list;
     }
 
-    /**
-     * Fetch news headlines that belong to a specific category.
-     * Demonstrates Many-to-Many query via join table news_categories.
-     */
+
     public List<News> getNewsByCategoryId(int categoryId) throws SQLException {
         List<News> list = new ArrayList<>();
         String sql = "SELECT DISTINCT n.id, n.title, n.summary, n.content, n.author, n.published_at " +
@@ -59,9 +54,7 @@ public class NewsDao {
         return list;
     }
 
-    /**
-     * Fetch complete news article by ID.
-     */
+
     public News getNewsById(int id) throws SQLException {
         String sql = "SELECT id, title, summary, content, author, published_at FROM news WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -77,10 +70,7 @@ public class NewsDao {
         return null;
     }
 
-    /**
-     * Fetch all categories associated with a news item.
-     * For example, "Sl lost" will return both Sports and Entertainment.
-     */
+
     public List<Category> getCategoriesForNews(int newsId) throws SQLException {
         List<Category> list = new ArrayList<>();
         String sql = "SELECT c.id, c.name, c.description " +
