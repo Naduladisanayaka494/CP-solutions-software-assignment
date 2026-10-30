@@ -4,7 +4,7 @@ import java.util.List;
 public class Problem4 {
 
     public static String largestNumber(List<Integer> list) {
-        
+
         list.sort((a, b) -> ("" + b + a).compareTo("" + a + b));
 
         String result = "";

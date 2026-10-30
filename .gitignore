@@ -1,2 +1,15 @@
+# Java compiled files
 *.class
 .idea/
+*.iml
+
+# Maven build directory
+backend/target/
+**/target/
+
+# Node / React
+frontend/node_modules/
+**/node_modules/
+frontend/dist/
+**/dist/
+.DS_Store
